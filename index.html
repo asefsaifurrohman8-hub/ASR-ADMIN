@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Admin Command Center</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3577F0',    // eTrade Blue
+                        secondary: '#ff497c',  // eTrade Pink
+                        dark: '#292930',
+                        light: '#F9F9F9',
+                        border: '#E5E5E5',
+                        sidebar: '#FFFFFF'
+                    },
+                    fontFamily: {
+                        sans: ['"DM Sans"', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 30px rgba(0, 0, 0, 0.03)',
+                        'float': '0 10px 40px rgba(53, 119, 240, 0.1)',
+                        'card': '0 0 20px rgba(0,0,0,0.05)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #F4F5F7; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Modern Form Inputs */
+        .input-field {
+            width: 100%;
+            background-color: #F9F9F9;
+            border: 1px solid #E5E5E5;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            outline: none;
+            transition: all 0.3s;
+        }
+        .input-field:focus { border-color: #3577F0; background-color: #fff; box-shadow: 0 0 0 4px rgba(53, 119, 240, 0.1); }
+
+        /* Animation */
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        .slide-up-enter-active { transition: all 0.4s ease-out; }
+        .slide-up-enter-from { transform: translateY(20px); opacity: 0; }
+
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="text-dark antialiased">
+
+    <div id="app" v-cloak class="min-h-screen flex">
+
+        <div v-if="!isLoggedIn" class="fixed inset-0 z-[100] flex items-center justify-center bg-[#F4F5F7]">
+            <div class="bg-white p-10 rounded-[30px] shadow-float w-full max-w-sm text-center">
+                <div class="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center text-3xl mx-auto mb-6">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <h1 class="text-2xl font-bold mb-2">Admin Access</h1>
+                <p class="text-gray-400 text-sm mb-8">Masuk untuk mengelola toko ASR.</p>
+                
+                <div class="space-y-4 text-left">
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 ml-1">Email</label>
+                        <input v-model="loginEmail" type="email" class="input-field" placeholder="admin@asr.com">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 ml-1">Password</label>
+                        <input v-model="loginPass" type="password" class="input-field" placeholder="••••••••">
+                    </div>
+                    <button @click="handleLogin" :disabled="loading" class="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-lg hover:bg-blue-600 transition flex justify-center items-center gap-2">
+                        <span v-if="loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</span>
+                        <span v-else>Masuk Dashboard</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <aside v-if="isLoggedIn" :class="showMobileMenu ? 'translate-x-0' : '-translate-x-full md:translate-x-0'" 
+               class="fixed md:static inset-y-0 left-0 z-50 w-72 bg-white border-r border-border flex flex-col transition-transform duration-300">
+            
+            <div class="p-8 flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center font-bold text-xl">A</div>
+                <div>
+                    <h2 class="font-bold text-lg leading-tight">ASR Admin</h2>
+                    <p class="text-[10px] text-gray-400 font-bold tracking-widest uppercase">Manager</p>
+                </div>
+            </div>
+
+            <div class="flex-1 px-4 space-y-2 overflow-y-auto py-4">
+                <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4 mb-2">Main Menu</div>
+                
+                <button @click="changeView('dashboard')" :class="view === 'dashboard' ? 'bg-primary/5 text-primary' : 'text-gray-500 hover:bg-gray-50'" class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl font-bold text-sm transition">
+                    <i class="fa-solid fa-chart-pie w-5"></i> Dashboard
+                </button>
+                <button @click="changeView('products')" :class="view === 'products' ? 'bg-primary/5 text-primary' : 'text-gray-500 hover:bg-gray-50'" class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl font-bold text-sm transition">
+                    <i class="fa-solid fa-box-open w-5"></i> Produk
+                </button>
+                <button @click="changeView('orders')" :class="view === 'orders' ? 'bg-primary/5 text-primary' : 'text-gray-500 hover:bg-gray-50'" class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl font-bold text-sm transition relative">
+                    <i class="fa-solid fa-cart-shopping w-5"></i> Pesanan
+                    <span v-if="pendingCount > 0" class="absolute right-4 bg-secondary text-white text-[9px] px-2 py-0.5 rounded-full">{{ pendingCount }}</span>
+                </button>
+
+                <div class="h-6"></div>
+                <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4 mb-2">Toko & Konten</div>
+
+                <button @click="changeView('cms')" :class="view === 'cms' ? 'bg-primary/5 text-primary' : 'text-gray-500 hover:bg-gray-50'" class="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl font-bold text-sm transition">
+                    <i class="fa-solid fa-wand-magic-sparkles w-5"></i> Tampilan Toko
+                </button>
+            </div>
+
+            <div class="p-4 border-t border-border">
+                <button @click="handleLogout" class="w-full flex items-center justify-center gap-2 text-red-500 bg-red-50 py-3 rounded-xl font-bold text-sm hover:bg-red-100 transition">
+                    <i class="fa-solid fa-power-off"></i> Keluar
+                </button>
+            </div>
+        </aside>
+
+        <div v-if="showMobileMenu && isLoggedIn" @click="showMobileMenu = false" class="fixed inset-0 bg-black/50 z-40 md:hidden"></div>
+
+        <main v-if="isLoggedIn" class="flex-1 h-screen overflow-y-auto relative">
+            
+            <div class="md:hidden sticky top-0 bg-white/90 backdrop-blur z-30 px-6 py-4 flex justify-between items-center border-b border-border">
+                <h1 class="font-bold text-lg">ASR Admin</h1>
+                <button @click="showMobileMenu = true" class="text-dark"><i class="fa-solid fa-bars text-xl"></i></button>
+            </div>
+
+            <div class="p-6 md:p-10 max-w-7xl mx-auto">
+                
+                <div v-if="view === 'dashboard'" class="animate-slide-up">
+                    <div class="flex justify-between items-center mb-8">
+                        <div>
+                            <h2 class="text-3xl font-bold text-dark">Ringkasan</h2>
+                            <p class="text-gray-500 text-sm">Update hari ini, {{ new Date().toLocaleDateString('id-ID') }}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        <div class="bg-white p-5 rounded-2xl shadow-soft border border-border">
+                            <div class="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Total Penjualan</div>
+                            <div class="text-2xl font-bold text-primary">{{ formatPriceCompact(totalSales) }}</div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl shadow-soft border border-border">
+                            <div class="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Order Masuk</div>
+                            <div class="text-2xl font-bold text-dark">{{ orders.length }}</div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl shadow-soft border border-border">
+                            <div class="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Produk Aktif</div>
+                            <div class="text-2xl font-bold text-dark">{{ products.length }}</div>
+                        </div>
+                        <div class="bg-primary text-white p-5 rounded-2xl shadow-float">
+                            <div class="text-white/60 text-xs font-bold uppercase tracking-wider mb-2">Perlu Proses</div>
+                            <div class="text-2xl font-bold">{{ pendingCount }}</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-3xl p-6 shadow-soft border border-border">
+                        <h3 class="font-bold text-lg mb-4">Pesanan Terbaru</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-gray-400 text-xs border-b border-border">
+                                        <th class="py-3 font-bold uppercase">ID</th>
+                                        <th class="py-3 font-bold uppercase">Pelanggan</th>
+                                        <th class="py-3 font-bold uppercase">Total</th>
+                                        <th class="py-3 font-bold uppercase">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="o in orders.slice(0, 5)" :key="o.id" class="border-b border-border/50 text-sm">
+                                        <td class="py-4 font-mono text-gray-500">#{{ o.id.slice(0,6) }}</td>
+                                        <td class="py-4 font-bold">{{ o.customerName }}</td>
+                                        <td class="py-4 text-primary font-bold">{{ formatPrice(o.total) }}</td>
+                                        <td class="py-4">
+                                            <span :class="statusClass(o.status)" class="px-2 py-1 rounded text-[10px] font-bold uppercase border">{{ o.status }}</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="view === 'products'" class="animate-slide-up">
+                    <div class="flex justify-between items-center mb-8">
+                        <div>
+                            <h2 class="text-3xl font-bold text-dark">Katalog Produk</h2>
+                            <p class="text-gray-500 text-sm">Kelola stok dan harga</p>
+                        </div>
+                        <button @click="openModalProduct()" class="bg-dark text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-black transition flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Tambah Baru
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        <div v-for="p in products" :key="p.id" @click="openModalProduct(p)" 
+                             class="group bg-white rounded-2xl p-3 shadow-soft hover:shadow-float transition cursor-pointer border border-transparent hover:border-primary/20">
+                            <div class="relative bg-light rounded-xl aspect-square mb-3 overflow-hidden">
+                                <img :src="p.image || 'https://via.placeholder.com/300'" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                                <div class="absolute bottom-2 right-2 bg-white/90 px-2 py-1 rounded text-[10px] font-bold shadow-sm">Stok: {{ p.stok }}</div>
+                            </div>
+                            <div class="px-1">
+                                <h3 class="font-bold text-sm truncate mb-1">{{ p.name }}</h3>
+                                <p class="text-primary font-bold text-sm">{{ formatPrice(p.price) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="view === 'cms'" class="animate-slide-up max-w-3xl">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-dark">Tampilan Toko</h2>
+                        <p class="text-gray-500 text-sm">Ubah Logo, Banner, dan Foto Tentang Kami</p>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="bg-white p-6 rounded-3xl shadow-soft border border-border">
+                            <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="fa-solid fa-image text-primary"></i> Logo Toko</h3>
+                            <div class="flex items-center gap-6">
+                                <div class="w-24 h-24 bg-light rounded-xl border border-dashed border-gray-300 flex items-center justify-center overflow-hidden">
+                                    <img v-if="settings.logo" :src="settings.logo" class="w-full h-full object-contain">
+                                    <span v-else class="text-xs text-gray-400">No Logo</span>
+                                </div>
+                                <div class="flex-1">
+                                    <input type="file" @change="uploadSettingImage($event, 'logo')" class="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20">
+                                    <p class="text-[10px] text-gray-400 mt-2">Format PNG/JPG. Max 2MB.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-3xl shadow-soft border border-border">
+                            <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="fa-solid fa-pager text-primary"></i> Banner Utama (Home)</h3>
+                            <div class="w-full h-40 bg-light rounded-xl border border-dashed border-gray-300 flex items-center justify-center overflow-hidden mb-4 relative group">
+                                <img v-if="settings.heroImage" :src="settings.heroImage" class="w-full h-full object-cover">
+                                <div v-else class="text-gray-400 text-sm">Belum ada banner</div>
+                            </div>
+                            <input type="file" @change="uploadSettingImage($event, 'heroImage')" class="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20">
+                        </div>
+
+                        <div class="bg-white p-6 rounded-3xl shadow-soft border border-border">
+                            <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="fa-solid fa-users-viewfinder text-primary"></i> Foto Tentang Kami</h3>
+                            <div class="w-full h-40 bg-light rounded-xl border border-dashed border-gray-300 flex items-center justify-center overflow-hidden mb-4">
+                                <img v-if="settings.aboutImage" :src="settings.aboutImage" class="w-full h-full object-cover">
+                                <div v-else class="text-gray-400 text-sm">Belum ada foto</div>
+                            </div>
+                            <input type="file" @change="uploadSettingImage($event, 'aboutImage')" class="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20">
+                        </div>
+
+                        <button @click="saveSettings" :disabled="uploadLoading" class="w-full bg-dark text-white py-4 rounded-xl font-bold shadow-lg hover:bg-black transition">
+                            {{ uploadLoading ? 'Menyimpan...' : 'Simpan Perubahan Tampilan' }}
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="view === 'orders'" class="animate-slide-up">
+                    <h2 class="text-3xl font-bold text-dark mb-8">Manajemen Pesanan</h2>
+                    <div class="space-y-4">
+                        <div v-for="o in orders" :key="o.id" class="bg-white p-6 rounded-3xl shadow-soft border border-border flex flex-col md:flex-row justify-between gap-6">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <span class="bg-gray-100 text-gray-500 px-2 py-1 rounded text-[10px] font-bold font-mono">#{{ o.id.slice(0,6) }}</span>
+                                    <span class="text-xs text-gray-400">{{ new Date(o.createdAt).toLocaleString() }}</span>
+                                </div>
+                                <h3 class="font-bold text-lg">{{ o.customerName }}</h3>
+                                <p class="text-xs text-gray-500 mb-4">{{ o.customerAddress }}</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <span v-for="item in o.items" class="bg-light border border-border px-3 py-1 rounded-lg text-xs font-medium">
+                                        {{ item.name }} ({{ item.color }}/{{ item.size }}) x{{ item.qty }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-end justify-between min-w-[150px]">
+                                <div class="text-right">
+                                    <div class="text-[10px] text-gray-400 font-bold uppercase">Total</div>
+                                    <div class="text-xl font-bold text-primary">{{ formatPrice(o.total) }}</div>
+                                </div>
+                                <div class="mt-4 w-full">
+                                    <select @change="updateOrderStatus(o.id, $event.target.value)" class="w-full bg-light border border-border rounded-lg px-3 py-2 text-xs font-bold outline-none cursor-pointer">
+                                        <option value="pending" :selected="o.status === 'pending'">Pending</option>
+                                        <option value="process" :selected="o.status === 'process'">Proses</option>
+                                        <option value="shipped" :selected="o.status === 'shipped'">Dikirim</option>
+                                        <option value="done" :selected="o.status === 'done'">Selesai</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-dark/60 backdrop-blur-sm" @click="showModal = false"></div>
+            <div class="bg-white w-full max-w-4xl rounded-[30px] shadow-2xl relative z-10 flex flex-col max-h-[90vh] overflow-hidden animate-slide-up">
+                
+                <div class="px-8 py-5 border-b border-border flex justify-between items-center bg-white">
+                    <h3 class="font-bold text-lg">{{ isEditing ? 'Edit Produk' : 'Produk Baru' }}</h3>
+                    <button @click="showModal = false" class="w-8 h-8 bg-light rounded-full flex items-center justify-center hover:bg-gray-200"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <div class="p-8 overflow-y-auto bg-[#F9F9F9] flex-1">
+                    <div class="grid md:grid-cols-2 gap-8">
+                        
+                        <div>
+                            <label class="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-3">Foto Produk</label>
+                            <div class="aspect-square bg-white rounded-2xl border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden mb-4 relative group">
+                                <img v-if="form.images.length > 0" :src="form.images[activeImgIdx]" class="w-full h-full object-contain">
+                                <div v-else class="text-center text-gray-400">
+                                    <i class="fa-solid fa-cloud-arrow-up text-3xl mb-2"></i>
+                                    <p class="text-xs">Upload Foto</p>
+                                </div>
+                                <button v-if="form.images.length > 0" @click="removeImage(activeImgIdx)" class="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full shadow opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-trash text-xs"></i></button>
+                            </div>
+                            <div class="grid grid-cols-4 gap-2">
+                                <div v-for="(img, idx) in form.images" :key="idx" @click="activeImgIdx = idx" :class="activeImgIdx === idx ? 'border-primary ring-2 ring-primary/20' : 'border-border'" class="aspect-square bg-white rounded-lg border overflow-hidden cursor-pointer">
+                                    <img :src="img" class="w-full h-full object-cover">
+                                </div>
+                                <div @click="$refs.fileInput.click()" class="aspect-square bg-white rounded-lg border border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary text-gray-400 hover:text-primary transition">
+                                    <i class="fa-solid fa-plus"></i>
+                                </div>
+                            </div>
+                            <input ref="fileInput" type="file" multiple class="hidden" @change="handleFileUpload">
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="label-text">Nama Produk</label>
+                                <input v-model="form.name" class="input-field" placeholder="Nama Produk">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="label-text">Kategori</label>
+                                    <select v-model="form.category" class="input-field">
+                                        <option v-for="c in categories" :value="c">{{ c }}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="label-text">Stok Total</label>
+                                    <input v-model.number="form.stok" type="number" class="input-field">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="label-text">Harga Dasar (IDR)</label>
+                                    <input v-model.number="form.price" type="number" class="input-field">
+                                </div>
+                                <div>
+                                    <label class="label-text">Diskon (%)</label>
+                                    <input v-model.number="form.discount" type="number" class="input-field">
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-4 rounded-xl border border-border">
+                                <label class="text-xs font-bold text-primary block mb-2">Varian & Harga Khusus</label>
+                                <div class="grid grid-cols-2 gap-3 mb-2">
+                                    <div>
+                                        <label class="text-[10px] text-gray-400 uppercase">Warna (Pisahkan Koma)</label>
+                                        <input v-model="form.colorsString" class="input-field py-2 text-xs" placeholder="Merah, Biru">
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-gray-400 uppercase">Ukuran (Pisahkan Koma)</label>
+                                        <input v-model="form.sizesString" class="input-field py-2 text-xs" placeholder="S, M, L, XL">
+                                    </div>
+                                </div>
+                                <p class="text-[10px] text-gray-400 italic">*Saat ini sistem menggunakan harga dasar untuk semua varian. Fitur harga per varian akan aktif di update berikutnya.</p>
+                            </div>
+
+                            <div>
+                                <label class="label-text">Deskripsi</label>
+                                <textarea v-model="form.description" rows="3" class="input-field resize-none"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-6 border-t border-border bg-white flex justify-end gap-3">
+                    <button v-if="isEditing" @click="deleteProduct" class="px-6 py-3 bg-red-50 text-red-500 rounded-xl font-bold text-sm hover:bg-red-100">Hapus</button>
+                    <button @click="saveProduct" :disabled="uploadLoading" class="px-8 py-3 bg-primary text-white rounded-xl font-bold text-sm hover:bg-blue-600 shadow-lg shadow-blue-500/30">
+                        {{ uploadLoading ? 'Menyimpan...' : 'Simpan Produk' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <style>
+        .label-text { display: block; font-size: 11px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; margin-left: 4px; }
+    </style>
+
+    <script type="module">
+        import { createApp, ref, reactive, computed, onMounted } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js';
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js';
+
+        const firebaseConfig = { apiKey: "AIzaSyC131UjEYgOY4MFOOgPXdTSm07TpGWFraE", authDomain: "asr-id.firebaseapp.com", projectId: "asr-id", storageBucket: "asr-id.firebasestorage.app", messagingSenderId: "327137445466", appId: "1:327137445466:web:54a191beedbb06b1fa7a63" };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        createApp({
+            setup() {
+                const isLoggedIn = ref(false);
+                const loading = ref(false);
+                const uploadLoading = ref(false);
+                const view = ref('dashboard');
+                const showMobileMenu = ref(false);
+                const products = ref([]);
+                const orders = ref([]);
+                const settings = reactive({ logo: '', heroImage: '', aboutImage: '' });
+                
+                const loginEmail = ref('');
+                const loginPass = ref('');
+                
+                const showModal = ref(false);
+                const isEditing = ref(false);
+                const editId = ref(null);
+                const activeImgIdx = ref(0);
+                const categories = ['Fashion', 'Gadget', 'Aksesoris', 'Sepatu', 'Elektronik'];
+
+                const form = reactive({
+                    name: '', price: 0, stok: 1, discount: 0, category: 'Fashion', description: '',
+                    images: [], colorsString: '', sizesString: ''
+                });
+
+                onAuthStateChanged(auth, (user) => {
+                    if(user) {
+                        isLoggedIn.value = true;
+                        fetchData();
+                        fetchSettings();
+                    } else { isLoggedIn.value = false; }
+                });
+
+                const handleLogin = async () => {
+                    loading.value = true;
+                    try { await signInWithEmailAndPassword(auth, loginEmail.value, loginPass.value); } 
+                    catch(e) { alert("Login Gagal"); }
+                    finally { loading.value = false; }
+                };
+
+                const handleLogout = () => signOut(auth);
+
+                const fetchData = () => {
+                    onSnapshot(collection(db, "products"), (snap) => {
+                        products.value = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                    });
+                    onSnapshot(query(collection(db, "orders"), orderBy("createdAt", "desc")), (snap) => {
+                        orders.value = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                    });
+                };
+
+                // --- CMS SETTINGS LOGIC ---
+                const fetchSettings = async () => {
+                    const docSnap = await getDoc(doc(db, "settings", "global"));
+                    if(docSnap.exists()) Object.assign(settings, docSnap.data());
+                };
+
+                const saveSettings = async () => {
+                    uploadLoading.value = true;
+                    try {
+                        await setDoc(doc(db, "settings", "global"), { ...settings }, { merge: true });
+                        alert("Tampilan toko berhasil disimpan!");
+                    } catch(e) { alert("Gagal menyimpan setting"); }
+                    finally { uploadLoading.value = false; }
+                };
+
+                const compressImage = (file) => {
+                    return new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(file);
+                        reader.onload = (e) => {
+                            const img = new Image();
+                            img.src = e.target.result;
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const scale = 800 / img.width;
+                                canvas.width = 800;
+                                canvas.height = img.height * scale;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                resolve(canvas.toDataURL('image/jpeg', 0.7));
+                            }
+                        }
+                    })
+                };
+
+                const uploadSettingImage = async (e, key) => {
+                    const file = e.target.files[0];
+                    if(!file) return;
+                    uploadLoading.value = true;
+                    const base64 = await compressImage(file);
+                    settings[key] = base64;
+                    uploadLoading.value = false;
+                };
+                // --------------------------
+
+                const openModalProduct = (item = null) => {
+                    isEditing.value = !!item;
+                    activeImgIdx.value = 0;
+                    if(item) {
+                        editId.value = item.id;
+                        Object.assign(form, item);
+                        form.images = item.gallery || (item.image ? [item.image] : []);
+                        form.colorsString = item.colors ? item.colors.join(',') : '';
+                        form.sizesString = item.sizes ? item.sizes.join(',') : '';
+                    } else {
+                        Object.assign(form, { name:'', price:0, stok:1, discount:0, category:'Fashion', description:'', images:[], colorsString:'', sizesString:'' });
+                    }
+                    showModal.value = true;
+                };
+
+                const handleFileUpload = async (e) => {
+                    uploadLoading.value = true;
+                    for (let file of e.target.files) {
+                        const base64 = await compressImage(file);
+                        form.images.push(base64);
+                    }
+                    uploadLoading.value = false;
+                };
+
+                const saveProduct = async () => {
+                    uploadLoading.value = true;
+                    try {
+                        const payload = {
+                            ...form,
+                            image: form.images[0] || '',
+                            gallery: form.images,
+                            colors: form.colorsString.split(',').map(s=>s.trim()).filter(s=>s),
+                            sizes: form.sizesString.split(',').map(s=>s.trim()).filter(s=>s),
+                            updatedAt: new Date().toISOString()
+                        };
+                        if(isEditing.value) await updateDoc(doc(db, "products", editId.value), payload);
+                        else await addDoc(collection(db, "products"), {...payload, createdAt: new Date().toISOString()});
+                        showModal.value = false;
+                    } catch(e) { alert("Gagal simpan (Data terlalu besar?)"); }
+                    finally { uploadLoading.value = false; }
+                };
+
+                const deleteProduct = async () => {
+                    if(confirm("Hapus?")) {
+                        await deleteDoc(doc(db, "products", editId.value));
+                        showModal.value = false;
+                    }
+                };
+
+                const removeImage = (i) => form.images.splice(i, 1);
+                const updateOrderStatus = async (id, status) => await updateDoc(doc(db, "orders", id), { status });
+                
+                const changeView = (v) => { view.value = v; showMobileMenu.value = false; };
+                const formatPrice = (v) => new Intl.NumberFormat('id-ID', {style:'currency', currency:'IDR', minimumFractionDigits:0}).format(v);
+                const formatPriceCompact = (v) => v >= 1000000 ? (v/1000000).toFixed(1) + 'jt' : (v/1000).toFixed(0) + 'rb';
+                const statusClass = (s) => ({'pending':'bg-orange-100 text-orange-600', 'process':'bg-blue-100 text-blue-600', 'shipped':'bg-purple-100 text-purple-600', 'done':'bg-green-100 text-green-600'}[s] || 'bg-gray-100');
+                const pendingCount = computed(() => orders.value.filter(o => o.status === 'pending').length);
+                const totalSales = computed(() => orders.value.filter(o => o.status === 'done').reduce((a,b) => a+b.total, 0));
+
+                return {
+                    isLoggedIn, loading, uploadLoading, view, showMobileMenu, loginEmail, loginPass,
+                    products, orders, pendingCount, totalSales,
+                    showModal, isEditing, form, activeImgIdx, categories,
+                    settings, // CMS Data
+                    handleLogin, handleLogout, changeView, openModalProduct, handleFileUpload, removeImage,
+                    saveProduct, deleteProduct, updateOrderStatus,
+                    fetchSettings, saveSettings, uploadSettingImage, // CMS Functions
+                    formatPrice, formatPriceCompact, statusClass
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
