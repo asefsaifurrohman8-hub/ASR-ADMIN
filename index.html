@@ -65,7 +65,7 @@
 
         /* CUSTOM BOTTOM NAV POSITION (NAIK 50PX) */
         .bottom-nav-custom {
-            bottom: 50px; /* Request user */
+            bottom: 50px; 
             border-radius: 20px 20px 0 0;
             box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
         }
@@ -245,18 +245,18 @@
                             </div>
 
                             <div>
-                                <label class="label-text mb-2">Banner Slider (Carousel)</label>
-                                <p class="text-[10px] text-gray-400 mb-3">Upload hingga 5 banner untuk slider otomatis di halaman Home.</p>
+                                <label class="label-text mb-2">Banner Slider & Copywriting</label>
+                                <p class="text-[10px] text-gray-400 mb-3">Upload gambar dan atur teks promosi untuk halaman utama.</p>
                                 
-                                <div class="space-y-3">
+                                <div class="space-y-4">
                                     <div v-for="(n, index) in 5" :key="index" class="border border-border rounded-lg p-3 bg-gray-50">
                                         <div class="flex justify-between items-center mb-2">
                                             <span class="text-[10px] font-bold text-gray-500">Banner #{{ index + 1 }}</span>
-                                            <button v-if="settings.banners && settings.banners[index]" @click="removeBanner(index)" class="text-red-500 text-[10px] hover:underline">Hapus</button>
+                                            <button v-if="settings.banners[index] && settings.banners[index].image" @click="removeBanner(index)" class="text-red-500 text-[10px] hover:underline">Hapus</button>
                                         </div>
                                         
-                                        <div class="h-24 bg-white rounded border border-dashed flex items-center justify-center overflow-hidden relative group cursor-pointer" @click="$refs['bannerInput'+index][0].click()">
-                                            <img v-if="settings.banners && settings.banners[index]" :src="settings.banners[index]" class="w-full h-full object-cover">
+                                        <div class="h-28 bg-white rounded border border-dashed flex items-center justify-center overflow-hidden relative group cursor-pointer mb-3" @click="$refs['bannerInput'+index][0].click()">
+                                            <img v-if="settings.banners[index] && settings.banners[index].image" :src="settings.banners[index].image" class="w-full h-full object-cover">
                                             <div v-else class="flex flex-col items-center">
                                                 <i class="fa-solid fa-plus text-gray-300 mb-1"></i>
                                                 <span class="text-[9px] text-gray-400">Upload Banner {{ index+1 }}</span>
@@ -264,6 +264,27 @@
                                             <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold">Ubah Foto</div>
                                         </div>
                                         <input :ref="'bannerInput'+index" type="file" class="hidden" @change="uploadBanner($event, index)">
+
+                                        <div v-if="settings.banners[index]" class="space-y-2 pt-2 border-t border-gray-200">
+                                            <div>
+                                                <label class="label-text text-[9px] mb-1">Judul Utama (Headline)</label>
+                                                <input v-model="settings.banners[index].title" class="input-field py-1.5" placeholder="Contoh: Diskon Akhir Tahun">
+                                            </div>
+                                            <div>
+                                                <label class="label-text text-[9px] mb-1">Sub Judul (Deskripsi)</label>
+                                                <input v-model="settings.banners[index].subtitle" class="input-field py-1.5" placeholder="Contoh: Hemat hingga 50% untuk item terpilih">
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <div>
+                                                    <label class="label-text text-[9px] mb-1">Teks Tombol</label>
+                                                    <input v-model="settings.banners[index].btnText" class="input-field py-1.5" placeholder="Beli Sekarang">
+                                                </div>
+                                                <div>
+                                                    <label class="label-text text-[9px] mb-1">Link Tujuan (Opsional)</label>
+                                                    <input v-model="settings.banners[index].link" class="input-field py-1.5" placeholder="/products atau https://...">
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -389,8 +410,10 @@
                 const view = ref('dashboard');
                 const products = ref([]);
                 const orders = ref([]);
-                // SETTINGS NOW INCLUDE BANNERS ARRAY
+                
+                // SETTINGS: Banners sekarang adalah Array of Objects
                 const settings = reactive({ logo: '', banners: [] });
+                
                 const loginEmail = ref('');
                 const loginPass = ref('');
                 
@@ -438,28 +461,59 @@
                     if(d.exists()) {
                         const data = d.data();
                         settings.logo = data.logo || '';
-                        // Support old 'heroImage' or new 'banners'
-                        if(data.banners && Array.isArray(data.banners)) {
-                            settings.banners = data.banners;
-                        } else if (data.heroImage) {
-                            settings.banners = [data.heroImage];
-                        } else {
-                            settings.banners = [];
+                        
+                        // INITIALIZE BANNERS: Convert old string format to Object if needed
+                        let rawBanners = data.banners || [];
+                        if (data.heroImage && rawBanners.length === 0) rawBanners = [data.heroImage]; // Fallback old hero
+
+                        // Ensure 5 slots are initialized as Objects
+                        const formattedBanners = [];
+                        for(let i=0; i<5; i++) {
+                            const item = rawBanners[i];
+                            if(item) {
+                                // Jika format lama (string URL), ubah jadi object
+                                if(typeof item === 'string') {
+                                    formattedBanners.push({ image: item, title: '', subtitle: '', btnText: '', link: '' });
+                                } else {
+                                    // Jika sudah format object, pakai apa adanya
+                                    formattedBanners.push({
+                                        image: item.image || '',
+                                        title: item.title || '',
+                                        subtitle: item.subtitle || '',
+                                        btnText: item.btnText || '',
+                                        link: item.link || ''
+                                    });
+                                }
+                            } else {
+                                // Slot kosong
+                                formattedBanners.push({ image: '', title: '', subtitle: '', btnText: '', link: '' });
+                            }
                         }
+                        settings.banners = formattedBanners;
+                    } else {
+                         // Default empty structure
+                         settings.banners = Array(5).fill({ image: '', title: '', subtitle: '', btnText: '', link: '' });
                     }
                 };
 
                 const saveSettings = async () => {
                     uploadLoading.value = true;
                     try { 
-                        // Fix for heroImage compatibility: use first banner as heroImage
+                        // Save array of objects
                         const payload = {
                             logo: settings.logo,
-                            banners: [...settings.banners],
-                            heroImage: settings.banners[0] || '' // Fallback for old code
+                            banners: settings.banners.map(b => ({
+                                image: b.image,
+                                title: b.title || '',
+                                subtitle: b.subtitle || '',
+                                btnText: b.btnText || '',
+                                link: b.link || ''
+                            })),
+                            // Backward compatibility for old heroImage
+                            heroImage: settings.banners[0]?.image || '' 
                         };
                         await setDoc(doc(db, "settings", "global"), payload, {merge:true}); 
-                        alert("Tampilan Toko Berhasil Disimpan!"); 
+                        alert("Tampilan & Copywriting Berhasil Disimpan!"); 
                     }
                     catch(e) { alert("Gagal: " + e.message); } finally { uploadLoading.value = false; }
                 };
@@ -489,14 +543,19 @@
                     if(!e.target.files[0]) return;
                     uploadLoading.value = true;
                     const base64 = await compressImage(e.target.files[0]);
-                    // Ensure array exists and put image at index
-                    if (!settings.banners) settings.banners = [];
-                    settings.banners[index] = base64;
+                    
+                    // Pastikan object ada sebelum assign property
+                    if (!settings.banners[index]) {
+                        settings.banners[index] = { image: '', title: '', subtitle: '', btnText: '', link: '' };
+                    }
+                    
+                    settings.banners[index].image = base64;
                     uploadLoading.value = false;
                 };
 
                 const removeBanner = (index) => {
-                    settings.banners.splice(index, 1);
+                    // Reset object di index tersebut
+                    settings.banners[index] = { image: '', title: '', subtitle: '', btnText: '', link: '' };
                 };
 
                 const openModalProduct = (item = null) => {
@@ -533,13 +592,12 @@
                     try {
                         const sizeArray = form.sizesString.split(',').map(s=>s.trim()).filter(s=>s);
                         
-                        // !!! PENTING: MEMBUAT ARRAY VARIANTS AGAR DIBACA OLEH TOKO ASR STORE !!!
                         const variantsArray = sizeArray.map(sizeName => {
                             const specificPrice = form.variantPrices[sizeName];
                             return {
                                 name: sizeName,
                                 price: specificPrice ? Number(specificPrice) : Number(form.price),
-                                originalPrice: Number(form.price) // Harga coret reference
+                                originalPrice: Number(form.price)
                             };
                         });
 
@@ -555,7 +613,7 @@
                             gallery: [...form.images],
                             colors: form.colorsString.split(',').map(s=>s.trim()).filter(s=>s),
                             sizes: sizeArray,
-                            variants: variantsArray, // INI YANG BIKIN HARGA BERUBAH DI TOKO
+                            variants: variantsArray,
                             updatedAt: new Date().toISOString()
                         };
 
