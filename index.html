@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ASR Admin | Compact Mode</title>
+    <title>ASR Admin | Store Manager</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -38,12 +38,12 @@
         body { background-color: #F8F9FA; -webkit-tap-highlight-color: transparent; font-size: 13px; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        /* SAFE AREA FIX (PONI & HOME BAR) */
+        /* SAFE AREA FIX */
         .pt-safe { padding-top: env(safe-area-inset-top); }
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-        .h-screen-safe { height: 100vh; /* Fallback */ height: 100dvh; }
+        .h-screen-safe { height: 100vh; height: 100dvh; }
         
-        /* Compact Inputs */
+        /* INPUT STYLES */
         .input-field {
             width: 100%; background-color: #fff; border: 1px solid #E5E7EB;
             padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 500;
@@ -51,18 +51,24 @@
         }
         .input-field:focus { border-color: #3577F0; ring: 1px solid #3577F0; }
         
-        /* Label Compact */
         .label-text { display: block; font-size: 10px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.03em; }
 
-        /* Animation */
+        /* ANIMATION */
         .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
 
         [v-cloak] { display: none; }
         
-        /* Bottom Nav Active State */
+        /* NAV STYLES */
         .nav-active { color: #3577F0; font-weight: 700; }
         .nav-inactive { color: #9CA3AF; }
+
+        /* CUSTOM BOTTOM NAV POSITION (NAIK 50PX) */
+        .bottom-nav-custom {
+            bottom: 50px; /* Request user */
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+        }
     </style>
 </head>
 <body class="text-dark antialiased">
@@ -114,8 +120,7 @@
 
         <main v-if="isLoggedIn" class="flex-1 flex flex-col h-full bg-[#F8F9FA] relative w-full pt-safe">
             
-            <div class="flex-1 overflow-y-auto pb-24 md:pb-0 p-4 md:p-8">
-                <div class="max-w-6xl mx-auto">
+            <div class="flex-1 overflow-y-auto pb-32 md:pb-0 p-4 md:p-8"> <div class="max-w-6xl mx-auto">
                 
                     <div v-if="view === 'dashboard'" class="animate-fade-in">
                         <div class="mb-5 flex justify-between items-end">
@@ -222,27 +227,50 @@
                     </div>
 
                     <div v-if="view === 'cms'" class="animate-fade-in max-w-xl mx-auto">
-                        <h2 class="text-xl font-bold text-dark mb-5">Tampilan Web</h2>
-                        <div class="bg-white p-5 rounded-xl border border-border shadow-sm space-y-4">
+                        <h2 class="text-xl font-bold text-dark mb-5">Pengaturan Tampilan</h2>
+                        <div class="bg-white p-5 rounded-xl border border-border shadow-sm space-y-6">
+                            
                             <div>
                                 <label class="label-text">Logo Toko</label>
                                 <div class="flex items-center gap-3">
-                                    <div class="w-12 h-12 bg-gray-50 rounded border border-dashed flex items-center justify-center overflow-hidden">
+                                    <div class="w-16 h-16 bg-gray-50 rounded border border-dashed flex items-center justify-center overflow-hidden">
                                         <img v-if="settings.logo" :src="settings.logo" class="w-full h-full object-contain">
+                                        <span v-else class="text-[9px] text-gray-400">No Logo</span>
                                     </div>
-                                    <input type="file" @change="uploadSettingImage($event, 'logo')" class="text-[10px] text-gray-500">
+                                    <div class="flex-1">
+                                        <input type="file" @change="uploadSettingImage($event, 'logo')" class="text-[10px] text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20">
+                                        <p class="text-[9px] text-gray-400 mt-1">Format: PNG, JPG (Max 1MB)</p>
+                                    </div>
                                 </div>
                             </div>
+
                             <div>
-                                <label class="label-text">Banner Home</label>
-                                <div class="h-24 bg-gray-50 rounded border border-dashed flex items-center justify-center overflow-hidden mb-2 relative">
-                                    <img v-if="settings.heroImage" :src="settings.heroImage" class="w-full h-full object-cover">
-                                    <span v-else class="text-[10px] text-gray-400">Upload Banner</span>
+                                <label class="label-text mb-2">Banner Slider (Carousel)</label>
+                                <p class="text-[10px] text-gray-400 mb-3">Upload hingga 5 banner untuk slider otomatis di halaman Home.</p>
+                                
+                                <div class="space-y-3">
+                                    <div v-for="(n, index) in 5" :key="index" class="border border-border rounded-lg p-3 bg-gray-50">
+                                        <div class="flex justify-between items-center mb-2">
+                                            <span class="text-[10px] font-bold text-gray-500">Banner #{{ index + 1 }}</span>
+                                            <button v-if="settings.banners && settings.banners[index]" @click="removeBanner(index)" class="text-red-500 text-[10px] hover:underline">Hapus</button>
+                                        </div>
+                                        
+                                        <div class="h-24 bg-white rounded border border-dashed flex items-center justify-center overflow-hidden relative group cursor-pointer" @click="$refs['bannerInput'+index][0].click()">
+                                            <img v-if="settings.banners && settings.banners[index]" :src="settings.banners[index]" class="w-full h-full object-cover">
+                                            <div v-else class="flex flex-col items-center">
+                                                <i class="fa-solid fa-plus text-gray-300 mb-1"></i>
+                                                <span class="text-[9px] text-gray-400">Upload Banner {{ index+1 }}</span>
+                                            </div>
+                                            <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold">Ubah Foto</div>
+                                        </div>
+                                        <input :ref="'bannerInput'+index" type="file" class="hidden" @change="uploadBanner($event, index)">
+                                    </div>
                                 </div>
-                                <input type="file" @change="uploadSettingImage($event, 'heroImage')" class="text-[10px] text-gray-500">
                             </div>
-                            <button @click="saveSettings" :disabled="uploadLoading" class="w-full bg-primary text-white py-2.5 rounded-lg font-bold text-xs mt-2 hover:bg-blue-600">
-                                {{ uploadLoading ? 'Menyimpan...' : 'Simpan Perubahan' }}
+
+                            <button @click="saveSettings" :disabled="uploadLoading" class="w-full bg-primary text-white py-3 rounded-lg font-bold text-xs mt-2 hover:bg-blue-600 shadow-lg sticky bottom-4 z-20">
+                                <span v-if="uploadLoading"><i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...</span>
+                                <span v-else>Simpan Semua Perubahan</span>
                             </button>
                         </div>
                     </div>
@@ -250,7 +278,7 @@
             </div>
         </main>
 
-        <div v-if="isLoggedIn" class="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-border flex justify-around items-center py-2 z-50 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+        <div v-if="isLoggedIn" class="md:hidden fixed w-full bg-white border-t border-border flex justify-around items-center py-2 z-50 bottom-nav-custom">
             <button v-for="item in navItems" @click="view = item.id" :class="view === item.id ? 'nav-active' : 'nav-inactive'" class="flex flex-col items-center p-2 w-16 transition">
                 <div class="relative">
                     <i :class="item.icon" class="text-lg mb-0.5"></i>
@@ -296,7 +324,7 @@
                         </div>
 
                         <div class="grid grid-cols-2 gap-3">
-                            <div><label class="label-text">Harga (Rp)</label><input v-model.number="form.price" type="number" class="input-field"></div>
+                            <div><label class="label-text">Harga Dasar (Rp)</label><input v-model.number="form.price" type="number" class="input-field"></div>
                             <div><label class="label-text">Diskon (%)</label><input v-model.number="form.discount" type="number" class="input-field"></div>
                         </div>
 
@@ -306,20 +334,22 @@
                         </div>
 
                         <div class="bg-white p-3 rounded-lg border border-border shadow-sm">
-                            <label class="text-xs font-bold text-dark mb-2 block border-b border-border pb-1">Varian & Harga</label>
+                            <label class="text-xs font-bold text-dark mb-2 block border-b border-border pb-1">Varian & Harga (Penting)</label>
                             <div class="mb-3">
                                 <label class="label-text">Warna (Pisahkan koma)</label>
                                 <input v-model="form.colorsString" class="input-field" placeholder="Hitam, Putih">
                             </div>
                             <div>
-                                <label class="label-text">Ukuran (Pisahkan koma untuk set harga)</label>
+                                <label class="label-text">Ukuran (Pisahkan koma)</label>
                                 <input v-model="form.sizesString" class="input-field mb-2" placeholder="S, M, L, XL">
                                 
                                 <div v-if="sizeList.length > 0" class="space-y-2 mt-2 bg-gray-50 p-2 rounded border border-dashed border-gray-300">
-                                    <label class="text-[9px] font-bold text-gray-500 uppercase">Set Harga per Ukuran (Opsional)</label>
+                                    <label class="text-[9px] font-bold text-gray-500 uppercase">Set Harga Khusus per Ukuran</label>
+                                    <p class="text-[9px] text-gray-400 mb-2">Jika kosong, akan mengikuti harga dasar.</p>
+                                    
                                     <div v-for="size in sizeList" :key="size" class="flex items-center gap-2">
-                                        <span class="w-8 text-xs font-bold text-center bg-white border border-border py-1 rounded">{{ size }}</span>
-                                        <input type="number" v-model="form.variantPrices[size]" :placeholder="form.price" class="input-field py-1 h-8 text-xs" title="Kosongkan jika sama dengan harga dasar">
+                                        <span class="w-10 text-xs font-bold text-center bg-white border border-border py-1.5 rounded">{{ size }}</span>
+                                        <input type="number" v-model="form.variantPrices[size]" :placeholder="form.price" class="input-field py-1 h-8 text-xs">
                                         <span class="text-[9px] text-gray-400">IDR</span>
                                     </div>
                                 </div>
@@ -359,14 +389,15 @@
                 const view = ref('dashboard');
                 const products = ref([]);
                 const orders = ref([]);
-                const settings = reactive({ logo: '', heroImage: '' });
+                // SETTINGS NOW INCLUDE BANNERS ARRAY
+                const settings = reactive({ logo: '', banners: [] });
                 const loginEmail = ref('');
                 const loginPass = ref('');
                 
                 const showModal = ref(false);
                 const isEditing = ref(false);
                 const editId = ref(null);
-                const categories = ['Fashion', 'Gadget', 'Sepatu', 'Elektronik', 'Aksesoris'];
+                const categories = ['Fashion', 'Gadget', 'Sepatu', 'Elektronik', 'Aksesoris', 'Otomotif'];
 
                 const navItems = [
                     { id: 'dashboard', label: 'Home', icon: 'fa-solid fa-chart-pie' },
@@ -380,7 +411,6 @@
                     images: [], colorsString: '', sizesString: '', shopeeLink: '', variantPrices: {}
                 });
 
-                // Compute size list for UI inputs
                 const sizeList = computed(() => {
                     if(!form.sizesString) return [];
                     return form.sizesString.split(',').map(s=>s.trim()).filter(s=>s!=='');
@@ -405,16 +435,31 @@
 
                 const fetchSettings = async () => {
                     const d = await getDoc(doc(db, "settings", "global"));
-                    if(d.exists()) Object.assign(settings, d.data());
+                    if(d.exists()) {
+                        const data = d.data();
+                        settings.logo = data.logo || '';
+                        // Support old 'heroImage' or new 'banners'
+                        if(data.banners && Array.isArray(data.banners)) {
+                            settings.banners = data.banners;
+                        } else if (data.heroImage) {
+                            settings.banners = [data.heroImage];
+                        } else {
+                            settings.banners = [];
+                        }
+                    }
                 };
 
                 const saveSettings = async () => {
                     uploadLoading.value = true;
                     try { 
-                        // Fix Proxy object issue in settings
-                        const payload = JSON.parse(JSON.stringify(settings));
+                        // Fix for heroImage compatibility: use first banner as heroImage
+                        const payload = {
+                            logo: settings.logo,
+                            banners: [...settings.banners],
+                            heroImage: settings.banners[0] || '' // Fallback for old code
+                        };
                         await setDoc(doc(db, "settings", "global"), payload, {merge:true}); 
-                        alert("Tersimpan"); 
+                        alert("Tampilan Toko Berhasil Disimpan!"); 
                     }
                     catch(e) { alert("Gagal: " + e.message); } finally { uploadLoading.value = false; }
                 };
@@ -425,9 +470,10 @@
                         const img = new Image(); img.src = e.target.result;
                         img.onload = () => {
                             const cvs = document.createElement('canvas');
-                            const scale = 600 / img.width; cvs.width = 600; cvs.height = img.height * scale;
+                            const scale = 800 / img.width; 
+                            cvs.width = 800; cvs.height = img.height * scale;
                             cvs.getContext('2d').drawImage(img, 0, 0, cvs.width, cvs.height);
-                            resolve(cvs.toDataURL('image/jpeg', 0.6));
+                            resolve(cvs.toDataURL('image/jpeg', 0.7));
                         }
                     }
                 });
@@ -439,6 +485,20 @@
                     uploadLoading.value = false;
                 };
 
+                const uploadBanner = async (e, index) => {
+                    if(!e.target.files[0]) return;
+                    uploadLoading.value = true;
+                    const base64 = await compressImage(e.target.files[0]);
+                    // Ensure array exists and put image at index
+                    if (!settings.banners) settings.banners = [];
+                    settings.banners[index] = base64;
+                    uploadLoading.value = false;
+                };
+
+                const removeBanner = (index) => {
+                    settings.banners.splice(index, 1);
+                };
+
                 const openModalProduct = (item = null) => {
                     isEditing.value = !!item;
                     if(item) {
@@ -448,8 +508,14 @@
                         form.colorsString = item.colors ? item.colors.join(',') : '';
                         form.sizesString = item.sizes ? item.sizes.join(',') : '';
                         form.shopeeLink = item.shopeeLink || '';
-                        // Clone to remove reactivity ref
-                        form.variantPrices = item.variantPrices ? JSON.parse(JSON.stringify(item.variantPrices)) : {};
+                        
+                        // RESTORE VARIANT PRICES FROM ARRAY TO OBJECT MAP
+                        form.variantPrices = {};
+                        if(item.variants && Array.isArray(item.variants)) {
+                            item.variants.forEach(v => {
+                                if(v.price) form.variantPrices[v.name] = v.price;
+                            });
+                        }
                     } else {
                         Object.assign(form, { name:'', price:0, stok:1, discount:0, category:'Fashion', description:'', images:[], colorsString:'', sizesString:'', shopeeLink:'', variantPrices:{} });
                     }
@@ -462,31 +528,34 @@
                     uploadLoading.value = false;
                 };
 
-                // ===== FIX HERE: CLEAN PAYLOAD CREATION =====
                 const saveProduct = async () => {
                     uploadLoading.value = true;
                     try {
-                        // Create clean payload (No Vue Proxy)
+                        const sizeArray = form.sizesString.split(',').map(s=>s.trim()).filter(s=>s);
+                        
+                        // !!! PENTING: MEMBUAT ARRAY VARIANTS AGAR DIBACA OLEH TOKO ASR STORE !!!
+                        const variantsArray = sizeArray.map(sizeName => {
+                            const specificPrice = form.variantPrices[sizeName];
+                            return {
+                                name: sizeName,
+                                price: specificPrice ? Number(specificPrice) : Number(form.price),
+                                originalPrice: Number(form.price) // Harga coret reference
+                            };
+                        });
+
                         const payload = {
                             name: form.name,
-                            price: Number(form.price), // Force number
+                            price: Number(form.price),
                             stok: Number(form.stok),
                             discount: Number(form.discount),
                             category: form.category,
                             description: form.description,
                             shopeeLink: form.shopeeLink || '',
-                            
-                            // Images & Gallery
                             image: form.images[0] || '',
-                            gallery: [...form.images], // Clone array
-                            
-                            // Arrays from strings
+                            gallery: [...form.images],
                             colors: form.colorsString.split(',').map(s=>s.trim()).filter(s=>s),
-                            sizes: form.sizesString.split(',').map(s=>s.trim()).filter(s=>s),
-                            
-                            // Deep clone object
-                            variantPrices: JSON.parse(JSON.stringify(form.variantPrices)),
-                            
+                            sizes: sizeArray,
+                            variants: variantsArray, // INI YANG BIKIN HARGA BERUBAH DI TOKO
                             updatedAt: new Date().toISOString()
                         };
 
@@ -496,7 +565,6 @@
                             await addDoc(collection(db, "products"), {...payload, createdAt: new Date().toISOString()});
                         }
                         showModal.value = false;
-                        // alert("Berhasil disimpan!"); // Optional
                     } catch(e) { 
                         console.error(e);
                         alert("Error: " + e.message); 
@@ -517,7 +585,7 @@
                 const pendingCount = computed(() => orders.value.filter(o => o.status === 'pending').length);
                 const totalSales = computed(() => orders.value.filter(o => o.status === 'done').reduce((a,b) => a+b.total, 0));
 
-                return { isLoggedIn, loading, uploadLoading, view, products, orders, pendingCount, totalSales, showModal, isEditing, form, sizeList, categories, settings, navItems, loginEmail, loginPass, handleLogin, handleLogout, openModalProduct, handleFileUpload, removeImage, saveProduct, deleteProduct, updateOrderStatus, fetchSettings, saveSettings, uploadSettingImage, formatPrice, formatPriceCompact, statusClass, statusBg }
+                return { isLoggedIn, loading, uploadLoading, view, products, orders, pendingCount, totalSales, showModal, isEditing, form, sizeList, categories, settings, navItems, loginEmail, loginPass, handleLogin, handleLogout, openModalProduct, handleFileUpload, removeImage, saveProduct, deleteProduct, updateOrderStatus, fetchSettings, saveSettings, uploadSettingImage, uploadBanner, removeBanner, formatPrice, formatPriceCompact, statusClass, statusBg }
             }
         }).mount('#app');
     </script>
