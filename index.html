@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ASR Admin | Compact Mode</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -38,6 +38,11 @@
         body { background-color: #F8F9FA; -webkit-tap-highlight-color: transparent; font-size: 13px; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
+        /* SAFE AREA FIX (PONI & HOME BAR) */
+        .pt-safe { padding-top: env(safe-area-inset-top); }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .h-screen-safe { height: 100vh; /* Fallback */ height: 100dvh; }
+        
         /* Compact Inputs */
         .input-field {
             width: 100%; background-color: #fff; border: 1px solid #E5E7EB;
@@ -62,7 +67,7 @@
 </head>
 <body class="text-dark antialiased">
 
-    <div id="app" v-cloak class="min-h-screen flex flex-col md:flex-row">
+    <div id="app" v-cloak class="h-screen-safe flex flex-col md:flex-row overflow-hidden">
 
         <div v-if="!isLoggedIn" class="fixed inset-0 z-[100] flex items-center justify-center bg-[#F8F9FA] p-4">
             <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-xs text-center border border-border">
@@ -89,7 +94,7 @@
             </div>
         </div>
 
-        <aside v-if="isLoggedIn" class="hidden md:flex w-64 bg-white border-r border-border flex-col h-screen sticky top-0">
+        <aside v-if="isLoggedIn" class="hidden md:flex w-64 bg-white border-r border-border flex-col h-full">
             <div class="p-6 flex items-center gap-3 border-b border-border/50">
                 <div class="w-8 h-8 bg-primary text-white rounded-lg flex items-center justify-center font-bold">A</div>
                 <span class="font-bold text-sm tracking-tight">ASR Admin</span>
@@ -107,140 +112,141 @@
             </div>
         </aside>
 
-        <main v-if="isLoggedIn" class="flex-1 pb-24 md:pb-0 overflow-y-auto h-screen bg-[#F8F9FA]">
+        <main v-if="isLoggedIn" class="flex-1 flex flex-col h-full bg-[#F8F9FA] relative w-full pt-safe">
             
-            <div class="p-4 md:p-8 max-w-6xl mx-auto">
+            <div class="flex-1 overflow-y-auto pb-24 md:pb-0 p-4 md:p-8">
+                <div class="max-w-6xl mx-auto">
                 
-                <div v-if="view === 'dashboard'" class="animate-fade-in">
-                    <div class="mb-5 flex justify-between items-end">
-                        <h2 class="text-xl font-bold text-dark">Ringkasan Toko</h2>
-                        <span class="text-[10px] text-gray-400 font-mono">{{ new Date().toLocaleDateString('id-ID') }}</span>
+                    <div v-if="view === 'dashboard'" class="animate-fade-in">
+                        <div class="mb-5 flex justify-between items-end">
+                            <h2 class="text-xl font-bold text-dark">Ringkasan Toko</h2>
+                            <span class="text-[10px] text-gray-400 font-mono">{{ new Date().toLocaleDateString('id-ID') }}</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                            <div class="bg-white p-4 rounded-xl border border-border shadow-sm">
+                                <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Pendapatan</div>
+                                <div class="text-lg font-bold text-primary">{{ formatPriceCompact(totalSales) }}</div>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl border border-border shadow-sm">
+                                <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Order Masuk</div>
+                                <div class="text-lg font-bold text-dark">{{ orders.length }}</div>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl border border-border shadow-sm">
+                                <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Produk</div>
+                                <div class="text-lg font-bold text-dark">{{ products.length }}</div>
+                            </div>
+                            <div class="bg-red-50 p-4 rounded-xl border border-red-100 shadow-sm">
+                                <div class="text-[10px] font-bold text-red-400 uppercase mb-1">Perlu Kirim</div>
+                                <div class="text-lg font-bold text-red-600">{{ pendingCount }}</div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl border border-border overflow-hidden shadow-sm">
+                            <div class="px-4 py-3 border-b border-border bg-gray-50"><h3 class="font-bold text-xs text-gray-600">Transaksi Terakhir</h3></div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left">
+                                    <thead class="bg-white text-[10px] uppercase text-gray-400">
+                                        <tr><th class="px-4 py-2">ID</th><th class="px-4 py-2">Nama</th><th class="px-4 py-2">Total</th><th class="px-4 py-2">Status</th></tr>
+                                    </thead>
+                                    <tbody class="text-xs">
+                                        <tr v-for="o in orders.slice(0, 5)" :key="o.id" class="border-t border-border hover:bg-gray-50">
+                                            <td class="px-4 py-3 font-mono text-gray-500">#{{ o.id.slice(0,4) }}</td>
+                                            <td class="px-4 py-3 font-medium">{{ o.customerName }}</td>
+                                            <td class="px-4 py-3 font-bold text-dark">{{ formatPrice(o.total) }}</td>
+                                            <td class="px-4 py-3"><span :class="statusClass(o.status)" class="px-1.5 py-0.5 rounded text-[9px] uppercase font-bold border">{{ o.status }}</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                        <div class="bg-white p-4 rounded-xl border border-border shadow-sm">
-                            <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Pendapatan</div>
-                            <div class="text-lg font-bold text-primary">{{ formatPriceCompact(totalSales) }}</div>
+                    <div v-if="view === 'products'" class="animate-fade-in">
+                        <div class="flex justify-between items-center mb-5 sticky top-0 bg-[#F8F9FA] z-10 py-2">
+                            <h2 class="text-xl font-bold text-dark">Produk</h2>
+                            <button @click="openModalProduct()" class="bg-dark text-white px-3 py-2 rounded-lg font-bold text-xs shadow-lg hover:bg-black transition flex items-center gap-2">
+                                <i class="fa-solid fa-plus"></i> Tambah
+                            </button>
                         </div>
-                        <div class="bg-white p-4 rounded-xl border border-border shadow-sm">
-                            <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Order Masuk</div>
-                            <div class="text-lg font-bold text-dark">{{ orders.length }}</div>
-                        </div>
-                        <div class="bg-white p-4 rounded-xl border border-border shadow-sm">
-                            <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Produk</div>
-                            <div class="text-lg font-bold text-dark">{{ products.length }}</div>
-                        </div>
-                        <div class="bg-red-50 p-4 rounded-xl border border-red-100 shadow-sm">
-                            <div class="text-[10px] font-bold text-red-400 uppercase mb-1">Perlu Kirim</div>
-                            <div class="text-lg font-bold text-red-600">{{ pendingCount }}</div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div v-for="p in products" :key="p.id" @click="openModalProduct(p)" 
+                                class="group bg-white rounded-xl p-2.5 border border-border hover:border-primary cursor-pointer transition shadow-sm relative overflow-hidden">
+                                <div v-if="p.shopeeLink" class="absolute top-2 right-2 z-10 text-[10px] bg-shopee text-white px-1.5 rounded font-bold shadow-md"><i class="fa-solid fa-bag-shopping"></i></div>
+                                <div class="bg-gray-100 rounded-lg aspect-square mb-2 overflow-hidden">
+                                    <img :src="p.image || 'https://via.placeholder.com/150'" class="w-full h-full object-cover">
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-xs truncate text-dark mb-0.5">{{ p.name }}</h3>
+                                    <div class="flex justify-between items-center">
+                                        <p class="text-primary font-bold text-xs">{{ formatPrice(p.price) }}</p>
+                                        <p class="text-[9px] text-gray-400">Stok: {{ p.stok }}</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl border border-border overflow-hidden shadow-sm">
-                        <div class="px-4 py-3 border-b border-border bg-gray-50"><h3 class="font-bold text-xs text-gray-600">Transaksi Terakhir</h3></div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left">
-                                <thead class="bg-white text-[10px] uppercase text-gray-400">
-                                    <tr><th class="px-4 py-2">ID</th><th class="px-4 py-2">Nama</th><th class="px-4 py-2">Total</th><th class="px-4 py-2">Status</th></tr>
-                                </thead>
-                                <tbody class="text-xs">
-                                    <tr v-for="o in orders.slice(0, 5)" :key="o.id" class="border-t border-border hover:bg-gray-50">
-                                        <td class="px-4 py-3 font-mono text-gray-500">#{{ o.id.slice(0,4) }}</td>
-                                        <td class="px-4 py-3 font-medium">{{ o.customerName }}</td>
-                                        <td class="px-4 py-3 font-bold text-dark">{{ formatPrice(o.total) }}</td>
-                                        <td class="px-4 py-3"><span :class="statusClass(o.status)" class="px-1.5 py-0.5 rounded text-[9px] uppercase font-bold border">{{ o.status }}</span></td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    <div v-if="view === 'orders'" class="animate-fade-in">
+                        <h2 class="text-xl font-bold text-dark mb-5">Daftar Pesanan</h2>
+                        <div class="space-y-3">
+                            <div v-for="o in orders" :key="o.id" class="bg-white p-4 rounded-xl border border-border shadow-sm flex flex-col gap-3">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold">#{{ o.id.slice(0,6) }}</span>
+                                            <span class="text-[9px] text-gray-400">{{ new Date(o.createdAt).toLocaleString() }}</span>
+                                        </div>
+                                        <h3 class="font-bold text-sm text-dark">{{ o.customerName }}</h3>
+                                        <p class="text-[10px] text-gray-500 line-clamp-1">{{ o.customerAddress }}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-sm font-black text-primary">{{ formatPrice(o.total) }}</div>
+                                        <select @change="updateOrderStatus(o.id, $event.target.value)" :class="statusBg(o.status)" class="mt-1 text-[10px] font-bold border-none rounded px-1 py-0.5 outline-none cursor-pointer">
+                                            <option value="pending" :selected="o.status === 'pending'">Pending</option>
+                                            <option value="process" :selected="o.status === 'process'">Proses</option>
+                                            <option value="shipped" :selected="o.status === 'shipped'">Dikirim</option>
+                                            <option value="done" :selected="o.status === 'done'">Selesai</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-50 p-2 rounded-lg border border-border/50">
+                                    <div v-for="item in o.items" class="text-[10px] flex justify-between items-center border-b border-dashed border-gray-200 last:border-0 py-1 first:pt-0 last:pb-0">
+                                        <span class="font-medium text-gray-600">{{ item.name }} <span class="text-gray-400">({{ item.color }}/{{ item.size }})</span></span>
+                                        <span class="font-bold">x{{ item.qty }}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div v-if="view === 'products'" class="animate-fade-in">
-                    <div class="flex justify-between items-center mb-5 sticky top-0 bg-[#F8F9FA] z-10 py-2">
-                        <h2 class="text-xl font-bold text-dark">Produk</h2>
-                        <button @click="openModalProduct()" class="bg-dark text-white px-3 py-2 rounded-lg font-bold text-xs shadow-lg hover:bg-black transition flex items-center gap-2">
-                            <i class="fa-solid fa-plus"></i> Tambah
-                        </button>
-                    </div>
-
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <div v-for="p in products" :key="p.id" @click="openModalProduct(p)" 
-                             class="group bg-white rounded-xl p-2.5 border border-border hover:border-primary cursor-pointer transition shadow-sm relative overflow-hidden">
-                             <div v-if="p.shopeeLink" class="absolute top-2 right-2 z-10 text-[10px] bg-shopee text-white px-1.5 rounded font-bold shadow-md"><i class="fa-solid fa-bag-shopping"></i></div>
-                            <div class="bg-gray-100 rounded-lg aspect-square mb-2 overflow-hidden">
-                                <img :src="p.image || 'https://via.placeholder.com/150'" class="w-full h-full object-cover">
+                    <div v-if="view === 'cms'" class="animate-fade-in max-w-xl mx-auto">
+                        <h2 class="text-xl font-bold text-dark mb-5">Tampilan Web</h2>
+                        <div class="bg-white p-5 rounded-xl border border-border shadow-sm space-y-4">
+                            <div>
+                                <label class="label-text">Logo Toko</label>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 bg-gray-50 rounded border border-dashed flex items-center justify-center overflow-hidden">
+                                        <img v-if="settings.logo" :src="settings.logo" class="w-full h-full object-contain">
+                                    </div>
+                                    <input type="file" @change="uploadSettingImage($event, 'logo')" class="text-[10px] text-gray-500">
+                                </div>
                             </div>
                             <div>
-                                <h3 class="font-bold text-xs truncate text-dark mb-0.5">{{ p.name }}</h3>
-                                <div class="flex justify-between items-center">
-                                    <p class="text-primary font-bold text-xs">{{ formatPrice(p.price) }}</p>
-                                    <p class="text-[9px] text-gray-400">Stok: {{ p.stok }}</p>
+                                <label class="label-text">Banner Home</label>
+                                <div class="h-24 bg-gray-50 rounded border border-dashed flex items-center justify-center overflow-hidden mb-2 relative">
+                                    <img v-if="settings.heroImage" :src="settings.heroImage" class="w-full h-full object-cover">
+                                    <span v-else class="text-[10px] text-gray-400">Upload Banner</span>
                                 </div>
+                                <input type="file" @change="uploadSettingImage($event, 'heroImage')" class="text-[10px] text-gray-500">
                             </div>
+                            <button @click="saveSettings" :disabled="uploadLoading" class="w-full bg-primary text-white py-2.5 rounded-lg font-bold text-xs mt-2 hover:bg-blue-600">
+                                {{ uploadLoading ? 'Menyimpan...' : 'Simpan Perubahan' }}
+                            </button>
                         </div>
                     </div>
                 </div>
-
-                <div v-if="view === 'orders'" class="animate-fade-in">
-                    <h2 class="text-xl font-bold text-dark mb-5">Daftar Pesanan</h2>
-                    <div class="space-y-3">
-                        <div v-for="o in orders" :key="o.id" class="bg-white p-4 rounded-xl border border-border shadow-sm flex flex-col gap-3">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold">#{{ o.id.slice(0,6) }}</span>
-                                        <span class="text-[9px] text-gray-400">{{ new Date(o.createdAt).toLocaleString() }}</span>
-                                    </div>
-                                    <h3 class="font-bold text-sm text-dark">{{ o.customerName }}</h3>
-                                    <p class="text-[10px] text-gray-500 line-clamp-1">{{ o.customerAddress }}</p>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-sm font-black text-primary">{{ formatPrice(o.total) }}</div>
-                                    <select @change="updateOrderStatus(o.id, $event.target.value)" :class="statusBg(o.status)" class="mt-1 text-[10px] font-bold border-none rounded px-1 py-0.5 outline-none cursor-pointer">
-                                        <option value="pending" :selected="o.status === 'pending'">Pending</option>
-                                        <option value="process" :selected="o.status === 'process'">Proses</option>
-                                        <option value="shipped" :selected="o.status === 'shipped'">Dikirim</option>
-                                        <option value="done" :selected="o.status === 'done'">Selesai</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="bg-gray-50 p-2 rounded-lg border border-border/50">
-                                <div v-for="item in o.items" class="text-[10px] flex justify-between items-center border-b border-dashed border-gray-200 last:border-0 py-1 first:pt-0 last:pb-0">
-                                    <span class="font-medium text-gray-600">{{ item.name }} <span class="text-gray-400">({{ item.color }}/{{ item.size }})</span></span>
-                                    <span class="font-bold">x{{ item.qty }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-if="view === 'cms'" class="animate-fade-in max-w-xl mx-auto">
-                    <h2 class="text-xl font-bold text-dark mb-5">Tampilan Web</h2>
-                    <div class="bg-white p-5 rounded-xl border border-border shadow-sm space-y-4">
-                        <div>
-                            <label class="label-text">Logo Toko</label>
-                            <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 bg-gray-50 rounded border border-dashed flex items-center justify-center overflow-hidden">
-                                    <img v-if="settings.logo" :src="settings.logo" class="w-full h-full object-contain">
-                                </div>
-                                <input type="file" @change="uploadSettingImage($event, 'logo')" class="text-[10px] text-gray-500">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="label-text">Banner Home</label>
-                            <div class="h-24 bg-gray-50 rounded border border-dashed flex items-center justify-center overflow-hidden mb-2 relative">
-                                <img v-if="settings.heroImage" :src="settings.heroImage" class="w-full h-full object-cover">
-                                <span v-else class="text-[10px] text-gray-400">Upload Banner</span>
-                            </div>
-                            <input type="file" @change="uploadSettingImage($event, 'heroImage')" class="text-[10px] text-gray-500">
-                        </div>
-                        <button @click="saveSettings" :disabled="uploadLoading" class="w-full bg-primary text-white py-2.5 rounded-lg font-bold text-xs mt-2 hover:bg-blue-600">
-                            {{ uploadLoading ? 'Menyimpan...' : 'Simpan Perubahan' }}
-                        </button>
-                    </div>
-                </div>
-
             </div>
         </main>
 
@@ -254,7 +260,7 @@
             </button>
         </div>
 
-        <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 pt-safe pb-safe">
             <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showModal = false"></div>
             <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl relative z-10 flex flex-col max-h-[90vh] overflow-hidden animate-fade-in">
                 
@@ -404,8 +410,13 @@
 
                 const saveSettings = async () => {
                     uploadLoading.value = true;
-                    try { await setDoc(doc(db, "settings", "global"), {...settings}, {merge:true}); alert("Tersimpan"); }
-                    catch(e) { alert("Gagal"); } finally { uploadLoading.value = false; }
+                    try { 
+                        // Fix Proxy object issue in settings
+                        const payload = JSON.parse(JSON.stringify(settings));
+                        await setDoc(doc(db, "settings", "global"), payload, {merge:true}); 
+                        alert("Tersimpan"); 
+                    }
+                    catch(e) { alert("Gagal: " + e.message); } finally { uploadLoading.value = false; }
                 };
 
                 const compressImage = (file) => new Promise((resolve) => {
@@ -437,7 +448,8 @@
                         form.colorsString = item.colors ? item.colors.join(',') : '';
                         form.sizesString = item.sizes ? item.sizes.join(',') : '';
                         form.shopeeLink = item.shopeeLink || '';
-                        form.variantPrices = item.variantPrices || {};
+                        // Clone to remove reactivity ref
+                        form.variantPrices = item.variantPrices ? JSON.parse(JSON.stringify(item.variantPrices)) : {};
                     } else {
                         Object.assign(form, { name:'', price:0, stok:1, discount:0, category:'Fashion', description:'', images:[], colorsString:'', sizesString:'', shopeeLink:'', variantPrices:{} });
                     }
@@ -450,21 +462,47 @@
                     uploadLoading.value = false;
                 };
 
+                // ===== FIX HERE: CLEAN PAYLOAD CREATION =====
                 const saveProduct = async () => {
                     uploadLoading.value = true;
                     try {
+                        // Create clean payload (No Vue Proxy)
                         const payload = {
-                            ...form,
+                            name: form.name,
+                            price: Number(form.price), // Force number
+                            stok: Number(form.stok),
+                            discount: Number(form.discount),
+                            category: form.category,
+                            description: form.description,
+                            shopeeLink: form.shopeeLink || '',
+                            
+                            // Images & Gallery
                             image: form.images[0] || '',
-                            gallery: form.images,
+                            gallery: [...form.images], // Clone array
+                            
+                            // Arrays from strings
                             colors: form.colorsString.split(',').map(s=>s.trim()).filter(s=>s),
                             sizes: form.sizesString.split(',').map(s=>s.trim()).filter(s=>s),
+                            
+                            // Deep clone object
+                            variantPrices: JSON.parse(JSON.stringify(form.variantPrices)),
+                            
                             updatedAt: new Date().toISOString()
                         };
-                        if(isEditing.value) await updateDoc(doc(db, "products", editId.value), payload);
-                        else await addDoc(collection(db, "products"), {...payload, createdAt: new Date().toISOString()});
+
+                        if(isEditing.value) {
+                            await updateDoc(doc(db, "products", editId.value), payload);
+                        } else {
+                            await addDoc(collection(db, "products"), {...payload, createdAt: new Date().toISOString()});
+                        }
                         showModal.value = false;
-                    } catch(e) { alert("Error save"); } finally { uploadLoading.value = false; }
+                        // alert("Berhasil disimpan!"); // Optional
+                    } catch(e) { 
+                        console.error(e);
+                        alert("Error: " + e.message); 
+                    } finally { 
+                        uploadLoading.value = false; 
+                    }
                 };
 
                 const deleteProduct = async () => { if(confirm("Hapus?")) { await deleteDoc(doc(db, "products", editId.value)); showModal.value=false; }};
